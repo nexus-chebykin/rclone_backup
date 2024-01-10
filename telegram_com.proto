@@ -1,0 +1,19 @@
+syntax = "proto3";
+// python -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. telegram_com.proto
+package telegram_com;
+
+service TelegramRepeater {
+  rpc SendMessage (MessageRequest) returns (MessageID) {}
+}
+
+message MessageRequest {
+  string message = 1;
+  optional int64 edit_id = 2;
+//  If edit_id is set, the message will be edited instead of sent.
+}
+
+message MessageID {
+  int64 message_id = 1;
+//  -1 means some failure.
+}
+
