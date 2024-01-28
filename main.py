@@ -12,7 +12,7 @@ now = datetime.now()
 date = now.strftime("%Y-%m-%d-%H-%M-%S")
 source_dirs = [r'/srv/dev-disk-by-uuid-34bc3142-1570-8d4c-bf28-38ac4ab822f8/Mitabrev/Backup/1_view',
                r'/srv/dev-disk-by-uuid-34bc3142-1570-8d4c-bf28-38ac4ab822f8/Mitabrev/Backup/2_view']
-target_containers = ['ya_crypt_1:', 'ya_crypt_2:']
+target_containers = ['ya_chunk_papa_1:', 'ya_chunk_simon_2:']
 target_dirs = [f'{target_container}backup' for target_container in target_containers]
 backup_dirs = [f'{target_container}removed' for target_container in target_containers]
 
@@ -114,11 +114,21 @@ def log_error(message):
 
 
 def log_progress(log_line):
-    json_log = json.loads(log_line)
-    if 'bandwidth limi' in json_log['msg'].lower():
+    print(log_line)
+    try:
+        json_log = json.loads(log_line)
+    except json.decoder.JSONDecodeError as e:
+        log_error(f'Could not decode json: {log_line}')
+        return
+
+    if 'bandwidth' in json_log['msg'].lower():
         log_info(json_log['msg'])
         return
+
     for logger in loggers:
+        if isinstance(logger, BasicLogger):
+            logger.log_progress(json_log['msg'])
+            continue
         if 'stats' not in json_log:
             continue
         logger.log_progress(json_log['msg'])
@@ -166,7 +176,8 @@ def before_start(sync_up, target_container):
     quota = json.loads(quota)
     quota = quota['free']
     log_info(f'Available quota: {sizeof_fmt(quota)}')
-    dry_run_output = subprocess.check_output(sync_up + ['--dry-run'], text=True, stderr=subprocess.STDOUT)
+    dry_run_output = subprocess.check_output(sync_up + ([] if dry_run else ['--dry-run']), text=True,
+                                             stderr=subprocess.STDOUT)
     dry_run_output = dry_run_output.split('\n')
     last_line = json.loads(dry_run_output[-2])
     size_to_upload = last_line['stats']['bytes']
@@ -195,11 +206,12 @@ for target_container, source_dir, target_dir, backup_dir in zip(target_container
         f'rclone sync {source_dir} {target_dir} --copy-links \
 --backup-dir {backup_dir} --suffix=".version_from_{date}" \
 -v --use-json-log \
---timeout 100m --retries 1'
+--timeout 100m --retries 1 \
+--checksum'
 
     print(f"The command is: {sync_up}")
     sync_up = shlex.split(sync_up)
-    sync_up.extend(['--bwlimit', '04:00,off 08:00,5M'])
+    sync_up.extend(['--bwlimit', '03:00,off 09:00,5M'])
     if dry_run:
         sync_up.append('--dry-run')
 
