@@ -1,8 +1,14 @@
 import json
-import grpc
-import telegram_com_pb2
-import telegram_com_pb2_grpc
 import time
+
+try:
+    import grpc
+    import telegram_com_pb2
+    import telegram_com_pb2_grpc
+except ImportError:
+    print('[Warning] gRPC not found! Disabling telegram logging')
+    grpc = None
+
 
 class BasicLogger:
     def log_info(self, message):
@@ -79,11 +85,11 @@ class TelegramLogger:
     def log_progress(self, message):
         self.log(self.progress, message, retain_previous=False)
 
+
 printer = BasicLogger()
-loggers = [
-    printer,
-    TelegramLogger(printer)
-]
+loggers = [printer] \
+          + ([TelegramLogger(printer)] if grpc else [])
+
 
 def log_info(message):
     for logger in loggers:
@@ -114,6 +120,7 @@ def log_progress(log_line):
         if 'stats' not in json_log:
             continue
         logger.log_progress(json_log['msg'])
+
 
 def sizeof_fmt(num, suffix="B"):
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
