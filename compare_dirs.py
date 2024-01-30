@@ -1,6 +1,9 @@
 import sys
 import pathlib
 
+# Assumes two files with hashes of directories built by $ find . -type f -print0 | sort -z | xargs -0 md5sum > dirhash.md5
+
+
 s = [sys.argv[1], sys.argv[2]]
 
 
