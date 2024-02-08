@@ -42,7 +42,7 @@ def delete_at_least_bytes(bytes_to_delete, backup_dir):
         if freed >= bytes_to_delete:
             break
     else:
-        raise Exception('Not enough space even after deleting all files in backup_dir!')
+        raise Exception(f'Not enough space even after deleting all files in backup_dir: {backup_dir}: {bytes_to_delete} > {freed}')
     #     do delete
     path_to_delete = list(map(lambda x: x['Path'], backup_dir_files[:num_delete]))
     files_to_delete_as_str = '\n'.join(path_to_delete)
