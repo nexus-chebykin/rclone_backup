@@ -21,7 +21,7 @@ backup_dirs = [f'{target_container}removed' for target_container in target_conta
 
 def delete_at_least_bytes(bytes_to_delete, backup_dir):
     # first, list all files in backup_dir
-    backup_dir_files = subprocess.check_output(['rclone', 'lsjson', backup_dir, '--files-only'], text=True)
+    backup_dir_files = subprocess.check_output(['rclone', 'lsjson', backup_dir, '--files-only', '-R'], text=True)
     backup_dir_files = json.loads(backup_dir_files)
     #     sort them by date. Important: not date of modification, but date of deletion!
     for file in backup_dir_files:
