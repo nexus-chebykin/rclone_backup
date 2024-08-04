@@ -19,6 +19,17 @@ target_dirs = [f'{target_container}backup' for target_container in target_contai
 backup_dirs = [f'{target_container}removed' for target_container in target_containers]
 
 
+def ensure_single_instance():
+    import fcntl, sys
+    lockfile = 'lock.lock'
+    fp = open(lockfile, 'w')
+    try:
+        fcntl.lockf(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        # another instance is running
+        sys.exit(1)
+
+
 def delete_at_least_bytes(bytes_to_delete, backup_dir):
     # first, list all files in backup_dir
     backup_dir_files = subprocess.check_output(['rclone', 'lsjson', backup_dir, '--files-only', '-R'], text=True)
@@ -42,7 +53,8 @@ def delete_at_least_bytes(bytes_to_delete, backup_dir):
         if freed >= bytes_to_delete:
             break
     else:
-        raise Exception(f'Not enough space even after deleting all files in backup_dir: {backup_dir}: {bytes_to_delete} > {freed}')
+        raise Exception(
+            f'Not enough space even after deleting all files in backup_dir: {backup_dir}: {bytes_to_delete} > {freed}')
     #     do delete
     path_to_delete = list(map(lambda x: x['Path'], backup_dir_files[:num_delete]))
     files_to_delete_as_str = '\n'.join(path_to_delete)
@@ -101,6 +113,8 @@ def before_start(sync_up, target_container):
         return
     subprocess.check_call(['rclone', 'cleanup', target_container])
 
+
+ensure_single_instance()
 
 dry_run = False
 for target_container, source_dir, target_dir, backup_dir in zip(target_containers, source_dirs, target_dirs,
