@@ -1,4 +1,5 @@
 import json
+import pathlib
 import subprocess
 import shlex
 from datetime import datetime
@@ -69,7 +70,15 @@ def delete_at_least_bytes(bytes_to_delete, backup_dir):
     log_info('Successfully deleted files from backup_dir')
 
 
-def before_start(sync_up, target_container):
+def before_start(sync_up, source_dir, target_container) -> bool:
+    # Returns whether to proceed with backup
+
+    # check that macrium is not running backup under that directory
+    hasBackupRunning = next(pathlib.Path(source_dir).glob('**/backup_running'), None)
+    if hasBackupRunning:
+        log_info('Macrium is currently running a backup, skipping')
+        return False
+
     # get available quota
     quota = subprocess.check_output(['rclone', 'about', target_container, '--json'], text=True)
     quota = json.loads(quota)
@@ -94,7 +103,7 @@ def before_start(sync_up, target_container):
 
     if size_to_upload == 0:
         log_info('Nothing to upload (?)')
-        return
+        return False
 
     log_info(f'Files to upload: {total_files} with size: {sizeof_fmt(size_to_upload)}')
     log_info('The files are:\n' + '\n'.join(files_to_upload[:10]) + ('\n...' if len(files_to_upload) > 10 else ''))
@@ -103,14 +112,14 @@ def before_start(sync_up, target_container):
     #     if we have enough quota, upload
 
     if size_to_upload <= quota:
-        return
+        return True
     #     else, delete oldest files from backup_dir
     delete_bytes_threshold = size_to_upload - quota
     delete_at_least_bytes(delete_bytes_threshold, backup_dir)
 
     # clean trash to actually free up space
     if dry_run:
-        return
+        return True
     subprocess.check_call(['rclone', 'cleanup', target_container])
 
 
@@ -133,10 +142,12 @@ for target_container, source_dir, target_dir, backup_dir in zip(target_container
     # exit(0)
     try:
         log_info(f'Checking in. Target: {target_container}')
-        before_start(sync_up, target_container)
+        proceed_uploading = before_start(sync_up,  source_dir, target_container)
+        if not proceed_uploading:
+            continue
         log_info(f'Starting sync. Target: {target_container}')
         # sync_up.append("--checksum") # not needed, if remote supports hashing, integrity check happens automatically
-        sync_up.extend(['--bwlimit', '03:00,off 09:00,5M'])
+        sync_up.extend(['--bwlimit', '00:00,off 09:00,5M'])
         if dry_run:
             sync_up.append('--dry-run')
         process = subprocess.Popen(sync_up, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
