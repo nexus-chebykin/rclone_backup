@@ -140,6 +140,10 @@ for target_container, source_dir, target_dir, backup_dir in zip(target_container
     sync_up = shlex.split(sync_up)
 
     # exit(0)
+
+    for logger in loggers:
+        logger.reset()
+
     try:
         log_info(f'Checking in. Target: {target_container}')
         proceed_uploading = before_start(sync_up,  source_dir, target_container)
@@ -163,5 +167,3 @@ for target_container, source_dir, target_dir, backup_dir in zip(target_container
     except Exception as e:
         log_error(f'Exception occurred: {e}')
         raise
-    for logger in loggers:
-        logger.reset()
