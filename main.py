@@ -121,6 +121,7 @@ def before_start(sync_up, source_dir, target_container) -> bool:
     if dry_run:
         return True
     subprocess.check_call(['rclone', 'cleanup', target_container])
+    return True
 
 
 ensure_single_instance()
