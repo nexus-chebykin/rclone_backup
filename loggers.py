@@ -28,7 +28,7 @@ class TelegramLogger:
     # Assumes a gRPC server satisfying the interface in telegram_com.proto
     TELEGRAM_ADDRESS = '192.168.1.107:50051'
 
-    def __init__(self, printer):
+    def __init__(self, printer: BasicLogger):
         self.channel = grpc.insecure_channel(self.TELEGRAM_ADDRESS)
         self.stub = telegram_com_pb2_grpc.TelegramRepeaterStub(self.channel)
         self.main_log = [None, ""]
@@ -49,13 +49,34 @@ class TelegramLogger:
             time.sleep(1 / 8 * (2 ** i))
         return -1
 
+    @staticmethod
+    def ensure_fits(text):
+        # TG messages are 4096 symbols long
+        snip = '\n<--snip-->'
+        maxlen = (
+                4096 - len(snip)
+                - 10  # to be certain
+        )
+        if len(text) > maxlen:
+            text = text[:maxlen] + snip
+        return text
+
     def log(self, message, text, retain_previous=True):
+        try:
+            self._log(message, text, retain_previous)
+        except Exception as e:
+            self.printer.log_error(e.add_note("Failed to log to telegram with this exception"))
+
+    def _log(self, message, text, retain_previous):
         text += '\n'
         ID = message[0]
         prev_text = message[1]
         if ID is None:
             result = self.ensure_done(
-                lambda: self.stub.SendMessage(telegram_com_pb2.MessageRequest(message=text)).message_id)
+                lambda: self.stub.SendMessage(
+                    telegram_com_pb2.MessageRequest(message=self.ensure_fits(text))
+                ).message_id
+            )
             if result == -1:
                 self.printer.log_error('Failed to send message to telegram: ' + text)
                 return
@@ -67,7 +88,7 @@ class TelegramLogger:
         else:
             to_send = text
         result = self.ensure_done(lambda: self.stub.SendMessage(
-            telegram_com_pb2.MessageRequest(edit_id=ID, message=to_send)).message_id)
+            telegram_com_pb2.MessageRequest(edit_id=ID, message=self.ensure_fits(to_send))).message_id)
         if result == -1:
             self.printer.log_error('Failed to edit message in telegram: ' + text)
             return
