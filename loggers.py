@@ -58,7 +58,7 @@ class TelegramLogger:
                 - 10  # to be certain
         )
         if len(text) > maxlen:
-            text = text[:maxlen] + snip
+            text = text[:2048] + snip + text[-(maxlen - 2048):]
         return text
 
     def log(self, message, text, retain_previous=True):
