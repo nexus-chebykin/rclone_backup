@@ -65,7 +65,8 @@ class TelegramLogger:
         try:
             self._log(message, text, retain_previous)
         except Exception as e:
-            self.printer.log_error(e.add_note("Failed to log to telegram with this exception"))
+            e.add_note("Failed to log to telegram with this exception")
+            self.printer.log_error(e)
 
     def _log(self, message, text, retain_previous):
         text += '\n'
