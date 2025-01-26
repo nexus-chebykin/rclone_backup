@@ -152,7 +152,7 @@ for target_container, source_dir, target_dir, backup_dir in zip(target_container
             continue
         log_info(f'Starting sync. Target: {target_container}')
         # sync_up.append("--checksum") # not needed, if remote supports hashing, integrity check happens automatically
-        sync_up.extend(['--bwlimit', '00:00,off 09:00,5M'])
+        sync_up.extend(['--bwlimit', '00:00,off 09:00,32M'])
         if dry_run:
             sync_up.append('--dry-run')
         process = subprocess.Popen(sync_up, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
